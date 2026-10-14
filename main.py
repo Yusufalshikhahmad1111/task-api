@@ -102,7 +102,7 @@ def get_task(task_id: int):
     return Task(id=row[0], title=row[1], done=bool(row[2]))
 
 
-    
+
 
 
 class TaskCreate(BaseModel):
@@ -117,11 +117,18 @@ def create_task(payload: TaskCreate):
             status_code=400,
             detail="Title is required and cannot be empty"
         )
-    new_id = max([t.id for t in tasks_db], default=0) + 1
-    new_task = Task(id=new_id, title=payload.title, done=False)
-    tasks_db.append(new_task)
-    return new_task
 
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO tasks (title, done) VALUES (?, ?)",
+        (payload.title.strip(), 0),
+    )
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    return Task(id=new_id, title=payload.title.strip(), done=False)
 
 
 class TaskUpdate(BaseModel):

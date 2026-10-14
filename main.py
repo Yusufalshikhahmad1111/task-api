@@ -1,27 +1,56 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
+import sqlite3
 
 app = FastAPI(
     title="Task API",
     version="1.0",
-    description="A simple CRUD API for managing a to-do list.",
+    description="A simple CRUD API for managing a to-do list, backed by SQLite.",
 )
 
+DB_PATH = "tasks.db"
 
 
+# ---------- Database setup ----------
+def init_db():
+    """Create the tasks table (if missing) and seed it once."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            done BOOLEAN NOT NULL DEFAULT 0
+        )
+    """)
+
+    cursor.execute("SELECT COUNT(*) FROM tasks")
+    count = cursor.fetchone()[0]
+
+    if count == 0:
+        cursor.executemany(
+            "INSERT INTO tasks (title, done) VALUES (?, ?)",
+            [
+                ("Learn FastAPI", 0),
+                ("Build CRUD API", 0),
+                ("Push to GitHub", 0),
+            ],
+        )
+
+    conn.commit()
+    conn.close()
+
+
+init_db()
+
+
+# ---------- Pydantic models ----------
 class Task(BaseModel):
     id: int
     title: str
     done: bool = False
-
-
-
-tasks_db: List[Task] = [
-    Task(id=1, title="Learn FastAPI", done=False),
-    Task(id=2, title="Build CRUD API", done=False),
-    Task(id=3, title="Push to GitHub", done=False),
-]
 
 
 
@@ -45,19 +74,35 @@ def health_check():
 
 @app.get("/tasks", response_model=List[Task], tags=["Tasks"], summary="List all tasks")
 def list_tasks():
-    """Returns the full list of tasks."""
-    return tasks_db
+    """Returns the full list of tasks from the database."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, done FROM tasks")
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [Task(id=r[0], title=r[1], done=bool(r[2])) for r in rows]
+
+
 
 
 
 @app.get("/tasks/{task_id}", response_model=Task, tags=["Tasks"], summary="Get one task")
 def get_task(task_id: int):
     """Returns a single task by its ID. Returns 404 if not found."""
-    for task in tasks_db:
-        if task.id == task_id:
-            return task
-    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, done FROM tasks WHERE id = ?", (task_id,))
+    row = cursor.fetchone()
+    conn.close()
 
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+
+    return Task(id=row[0], title=row[1], done=bool(row[2]))
+
+
+    
 
 
 class TaskCreate(BaseModel):

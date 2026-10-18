@@ -1,11 +1,11 @@
 # Task API
 
-A simple CRUD API for managing a to-do list, built with **FastAPI** as part of the FlyRank Backend AI Engineering program (Week 2).
+A simple CRUD API for managing a to-do list, built with **FastAPI** as part of the FlyRank Backend AI Engineering program (Week 3).
 
 ## Features
 
 - Full CRUD operations on tasks (Create, Read, Update, Delete)
-- In-memory storage (no database)
+- **Persistent storage using SQLite** (data survives server restarts)
 - Input validation with proper HTTP status codes
 - Interactive API docs via Swagger UI
 
@@ -39,6 +39,30 @@ uvicorn main:app --reload
 Then open:
 - API root: http://localhost:8000
 - Swagger UI: http://localhost:8000/docs
+
+## Database (SQLite)
+
+This API stores tasks in a **SQLite** database (`tasks.db`).
+
+- **Why SQLite?** It requires no separate server, stores data in a single file, and is ideal for learning persistence.
+- **Where is the file?** `tasks.db` in the project root. It is created automatically on first run.
+- **Persistence:** Data survives server restarts.
+
+### Database Schema
+
+| Column | Type    | Notes                         |
+|--------|---------|-------------------------------|
+| id     | INTEGER | Primary key, auto-increment   |
+| title  | TEXT    | Task title (required)         |
+| done   | BOOLEAN | 0 = open, 1 = completed       |
+
+### Example SQL query
+
+```sql
+SELECT * FROM tasks WHERE done = 1;
+```
+
+![Database screenshot](database.png)
 
 ## Endpoints
 
@@ -87,19 +111,21 @@ content-type: application/json
 
 ## Swagger UI
 
-![Swagger UI screenshot](swagger.png)
+![Swagger UI screenshot](swagger1.png)
 
 ## Project structure
 
 ```
 task-api/
 ├── main.py          # FastAPI application
-├── swagger.png      # Swagger UI screenshot
+├── database.png     # SQLite database screenshot
+├── swagger1.png     # Swagger UI screenshot
 ├── README.md        # This file
-└── .gitignore       # Git ignore rules
+├── .gitignore       # Git ignore rules
+└── tasks.db         # SQLite database (auto-generated, not tracked)
 ```
 
 ## Notes
 
-- Data is stored in memory only. Restarting the server resets all tasks.
-- This project was built stage by stage (Stages 0–6), with one commit per stage.
+- Data is stored in SQLite and persists across server restarts.
+- This project was built stage by stage (Stages 0–5 of Week 3), with one commit per stage.
